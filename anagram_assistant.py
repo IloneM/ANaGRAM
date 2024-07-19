@@ -39,13 +39,14 @@ class Parameters(dict):
 
 # Default Parameters
 def default_parameters_factory(input_dim, output_dim,
+                               expe_name,
                                n_inner_samples, n_boundary_samples, n_eval_samples,
                                rcond=None):
     return Parameters(
-        dict(layer_sizes=[input_dim, 32, output_dim], expe_path=None, tensorboard_path=None, save_final_weights=False,
-             weights_verbosity=0, tb_verbosity=0, NNTK_verbosity=0, NTK_verbosity=0, Green_verbosity=0, verbosity=100,
-             nsteps=501, seed=42, rcond=rcond, n_inner_samples=n_inner_samples, n_boundary_samples=n_boundary_samples,
-             n_eval_samples=n_eval_samples)
+        dict(layer_sizes=[input_dim, 32, output_dim], expe_name=expe_name, expe_path=None, tensorboard_path=None,
+             save_final_weights=False, weights_verbosity=0, tb_verbosity=0, NNTK_verbosity=0, NTK_verbosity=0, Green_verbosity=0,
+             verbosity=100, nsteps=501, seed=42, rcond=rcond, rcond_relative_to_bigger_sv=True, n_inner_samples=n_inner_samples,
+             n_boundary_samples=n_boundary_samples, n_eval_samples=n_eval_samples)
     )
 
 def create_parser():
@@ -54,6 +55,10 @@ def create_parser():
     parser.add_argument("-ls", "--layer_sizes",
                         help="Defines the MLP architecture as a sequence of layers sizes",
                         nargs='+', type=int)
+
+    parser.add_argument("-exp", "--expe_name",
+                        help="Name of the experiment",
+                        type=str)
 
     parser.add_argument("-p", "--path",
                         help="Path into which the experiments potential outputs should be stored",
@@ -103,6 +108,10 @@ def create_parser():
                         help="The rcond for the spectral cutoff in anagram [negative or null value means default value]",
                         type=float)
 
+    parser.add_argument("-rabs", "--rcond_absolute",
+                        help="If set, then rcond is taken as an absolute value and not relative to biggest singular value",
+                        action="store_false")
+
     return parser
 
 
@@ -111,6 +120,7 @@ def parse(args, default_params):
     dp = Parameters(default_params)
     correspondences = {
         'layer_sizes': 'layer_sizes',
+        'expe_name': 'expe_name',
         'expe_path': 'path',
         'tensorboard_path': 'tensorboard_path',
         'save_final_weights': 'save_final_weights',
@@ -123,6 +133,7 @@ def parse(args, default_params):
         'nsteps': 'nsteps',
         'seed': 'seed',
         'rcond': 'rcond',
+        'rcond_relative_to_bigger_sv': 'rcond_absolute',
     }
 
     if ap.layer_sizes is not None and not (dp.layer_sizes[0] == ap.layer_sizes[0] and dp.layer_sizes[-1] == ap.layer_sizes[-1]):
@@ -174,8 +185,7 @@ class Assistant:
                  operators,
                  expe_parameters,
                  sources=None,
-                 solution=None,
-                 expe_name=None):
+                 solution=None):
         if len(integrators) == len(operators): # in this case last integrator is interior integrator and used as eval integrator
             self.batch_samples = make_integrators_samples(integrators)
         elif len(integrators) == len(operators)+1: # in this case last integrator is eval integrator
@@ -189,12 +199,15 @@ class Assistant:
 
         self.ep = ep = Parameters(expe_parameters)
         self.solution = solution
-        self.expe_name = expe_name
         for key, val in ep.items():
             setattr(self, key, val)
 
         for key in {'verbosity', 'tb_verbosity', 'weights_verbosity', 'NNTK_verbosity', 'NTK_verbosity', 'Green_verbosity'}:
             setattr(self, key, max(ep[key], 0))
+
+        test_expe_name_is_file = None if self.expe_name is None else re.match('^([^\.]*)(?:\.[a-zA-Z]*)$', self.expe_name)
+        if test_expe_name_is_file is not None:
+            self.expe_name = test_expe_name_is_file.group(1)
 
         if isinstance(operators, dict):
             self.operators_names = tuple(operators.keys())
@@ -216,12 +229,10 @@ class Assistant:
 
         if self.save_final_weights or self.weights_verbosity or self.NNTK_verbosity or self.Green_verbosity or (self.tb_verbosity and self.tensorboard_path is None):
             if self.expe_path is None:
-                if expe_name is None:
+                if self.expe_name is None:
                     raise ValueError('You need to provide a path or an expe_name.')
                 else:
-                    self.expe_path = os.path.join('experiments',
-                                                  re.match('^([^\.]*)(?:\.[a-zA-Z]*)$',
-                                                           expe_name).group(1) + '_' + datetime.now().strftime("%Y%m%d-%H%M%S"))
+                    self.expe_path = os.path.join('experiments', '{}_{}'.format(self.expe_name, datetime.now().strftime("%Y%m%d-%H%M%S")))
             try:
                 os.makedirs(self.expe_path)
             except FileExistsError as e:
@@ -229,7 +240,8 @@ class Assistant:
                 raise e
 
         if self.tb_verbosity:
-            tensorboard_folder_name = datetime.now().strftime("%Y%m%d-%H%M%S") if expe_name is None else expe_name + datetime.now().strftime("%Y%m%d-%H%M%S")
+            tensorboard_folder_name = datetime.now().strftime("%Y%m%d-%H%M%S") if self.expe_name is None \
+                                        else '{}_{}'.format(self.expe_name, datetime.now().strftime("%Y%m%d-%H%M%S"))
             if self.tensorboard_path is None:
                 self.tensorboard_path = os.path.join('experiments', 'tensorboard_logs')
             self.tensorboard_path = os.path.join(self.tensorboard_path, tensorboard_folder_name)
@@ -270,7 +282,7 @@ class Assistant:
         else:
             self.L2_error = self.H1_error = None
 
-        self.optimizer = Optimizer(self.model, make_integrators_samples(integrators[:-1]), operators, sources, self.rcond)
+        self.optimizer = Optimizer(self.model, make_integrators_samples(integrators[:-1]), operators, sources, self.rcond, self.rcond_relative_to_bigger_sv)
 
         self.start_time = time.time()
 

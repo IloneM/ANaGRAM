@@ -37,7 +37,8 @@ class Optimizer:
                  loss_samples: Iterable[jax.typing.ArrayLike],
                  functional_operators: Iterable[Callable[Callable[[jax.typing.ArrayLike], jax.Array], Callable[[jax.typing.ArrayLike], jax.Array]]],
                  sources: Callable[[jax.typing.ArrayLike], jax.Array]|None = None,
-                 rcond: int|None = None):
+                 rcond: int|None = None,
+                 rcond_relative_to_bigger_sv: bool = True):
         self.model = model
         self.functional_operators = functional_operators
 
@@ -55,7 +56,7 @@ class Optimizer:
         self.ls_update = grid_line_search_factory(self.tot_loss, steps)
 
         self.rcond = rcond
-        self.nat_grad = quadratic_nat_grad_factory(model, functional_operators, sources, rcond)
+        self.nat_grad = quadratic_nat_grad_factory(model, functional_operators, sources, rcond, rcond_relative_to_bigger_sv)
 
     def step(self: object,
              params: Iterable[jax.typing.ArrayLike],

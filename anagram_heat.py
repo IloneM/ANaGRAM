@@ -30,9 +30,10 @@ from jax.lib import xla_bridge
 print('using device : {}'.format(xla_bridge.get_backend().platform))
 
 ## THIS VALUE CAN BE OPTIMIZED
-rcond = 1e-6
+rcond = None #1e-6
 
-expe_parameters = default_parameters_factory(input_dim=2, output_dim=1, n_inner_samples=30, n_boundary_samples=30, n_eval_samples=300, rcond=rcond)
+expe_parameters = default_parameters_factory(input_dim=2, output_dim=1, expe_name=os.path.basename(__file__),
+                                             n_inner_samples=30, n_boundary_samples=30, n_eval_samples=300, rcond=rcond)
 expe_parameters.layer_sizes = [2, 64, 1]
 
 if __name__ == '__main__':
@@ -88,8 +89,7 @@ assistant = Assistant(
     functional_operators,
     expe_parameters,
     sources,
-    u_star,
-    os.path.basename(__file__)
+    u_star
 )
 
 assistant.optimize()

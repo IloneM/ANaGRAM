@@ -31,7 +31,8 @@ print('using device : {}'.format(xla_bridge.get_backend().platform))
 ### THIS VALUE CAN BE OPTIMIZED
 rcond = 1e-5
 
-expe_parameters = default_parameters_factory(input_dim=2, output_dim=1, n_inner_samples=30, n_boundary_samples=30, n_eval_samples=200, rcond=rcond)
+expe_parameters = default_parameters_factory(input_dim=2, output_dim=1, expe_name=os.path.basename(__file__),
+                                             n_inner_samples=30, n_boundary_samples=30, n_eval_samples=200, rcond=rcond)
 
 if __name__ == '__main__':
     args_parser = create_parser()
@@ -70,8 +71,7 @@ assistant = Assistant(
     functional_operators,
     expe_parameters,
     sources,
-    u_star,
-    os.path.basename(__file__)
+    u_star
 )
 
 assistant.optimize()

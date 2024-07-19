@@ -80,15 +80,20 @@ def full_features_factory(model, functional_operators):
 # In[6]:
 
 
-def nat_grad_factory(full_features, true_gradient, const_tol=None, const_cut_low_signal=True, const_return_details=False):
-    @partial(jax.jit, static_argnames=['tol', 'cut_low_signal', 'return_details'])
+def nat_grad_factory(full_features, true_gradient, const_tol=None, const_tol_relative_to_bigger_sv=True, const_cut_low_signal=True, const_return_details=False):
+    @partial(jax.jit, static_argnames=['tol', 'tol_relative_to_bigger_sv', 'cut_low_signal', 'return_details'])
     def natural_gradient(params, batch_samples,
-                         tol=const_tol, cut_low_signal=const_cut_low_signal, return_details=const_return_details):
+                         tol=const_tol,
+                         tol_relative_to_bigger_sv=const_tol_relative_to_bigger_sv,
+                         cut_low_signal=const_cut_low_signal,
+                         return_details=const_return_details):
         full_features_evaluated = full_features(params, batch_samples)
         
         U_features, Lambda_features, VT_features = jax.scipy.linalg.svd(full_features_evaluated, full_matrices=False)
         if tol is None:
-            tol = jnp.sqrt(jnp.finfo(Lambda_features.dtype).eps * full_features_evaluated.shape[0]) * Lambda_features[0]
+            tol = jnp.sqrt(jnp.finfo(Lambda_features.dtype).eps * full_features_evaluated.shape[0])
+        if tol_relative_to_bigger_sv:
+            tol = tol * Lambda_features[0]
         mask = Lambda_features >= jnp.array(tol, dtype=Lambda_features.dtype)
         rank = mask.sum()
         safe_Lambda = jnp.where(mask, Lambda_features, 1).astype(Lambda_features.dtype)
@@ -143,27 +148,10 @@ def full_quadratic_gradient_factory(model, functional_operators, sources=None):
 
     return full_gradient
 
-# def full_quadratic_gradient_factory(model, functional_operators, sources=None):
-#     operators_on_model = tuple(make_operator_on_model(model, fo) for fo in functional_operators)
-#     v_operators_on_model = tuple(vmap(oom, (None, 0)) for oom in operators_on_model)
-
-#     if sources is None:
-#         sources = tuple(null_source for fo in functional_operators)
-#     v_sources = tuple(vmap(s, (0,)) for s in sources)
-
-#     @jit
-#     def full_gradient(params, batch_samples):
-#         return jnp.concatenate(tuple(voom(params, bs) - vs(bs)
-#                                      for voom, vs, bs in zip(v_operators_on_model, v_sources, batch_samples)), axis=0)
-
-#     return full_gradient
-
 # In[11]:
 
-# def quadratic_nat_grad_factory(model, functional_operators, const_tol=None, sources=None, const_cut_low_signal=True, const_return_details=False):
-def quadratic_nat_grad_factory(model, functional_operators, sources=None, tol=None, cut_low_signal=True, return_details=False):
+def quadratic_nat_grad_factory(model, functional_operators, sources=None, tol=None, tol_relative_to_bigger_sv=True, cut_low_signal=True, return_details=False):
     full_features = full_features_factory(model, functional_operators)
     true_gradient = full_quadratic_gradient_factory(model, functional_operators, sources)
 
-    return nat_grad_factory(full_features, true_gradient, tol, cut_low_signal, return_details)
-
+    return nat_grad_factory(full_features, true_gradient, tol, tol_relative_to_bigger_sv, cut_low_signal, return_details)

@@ -34,7 +34,8 @@ rcond = None
 # problem dimension
 dim = 5
 
-expe_parameters = default_parameters_factory(input_dim=dim, output_dim=1, n_inner_samples=4000, n_boundary_samples=500, n_eval_samples=40000, rcond=rcond)
+expe_parameters = default_parameters_factory(input_dim=dim, output_dim=1, expe_name=os.path.basename(__file__),
+                                             n_inner_samples=4000, n_boundary_samples=500, n_eval_samples=40000, rcond=rcond)
 
 # random seed
 # expe_parameters.seed = 0
@@ -80,8 +81,7 @@ assistant = Assistant(
     functional_operators,
     expe_parameters,
     sources,
-    u_star,
-    os.path.basename(__file__)
+    u_star
 )
 
 assistant.optimize()
