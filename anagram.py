@@ -22,8 +22,16 @@ from functools import partial
 def identity_operator(u):
     return u
 
-# In[2]:
+def null_source(x):
+    return 0.
 
+class L2_Regularizer:
+    def __init__(self, threshold=1.):
+        self.threshold = threshold
+    def __call__(self, u):
+        if self.threshold == 1.:
+            return u
+        return jax.jit(lambda params, x: self.threshold * u(params, x))
 
 ddxi = lambda u, i: del_i(del_i(u, i), i)
 
@@ -31,7 +39,7 @@ def laplacian(u, axis):
     full_double_grad = [ddxi(u, i) for i in axis]
     return jax.jit(lambda x: jnp.sum(jnp.stack([d(x) for d in full_double_grad])))
 
-# In[3]:
+# In[4]:
 
 
 def make_operator_on_model(model, functional_operator):
@@ -117,14 +125,11 @@ def nat_grad_factory(full_features, true_gradient, const_tol=None, const_tol_rel
 
     return natural_gradient
 
-# In[7]:
-
-def null_source(x):
-    return 0.
-
 # In[8]:
 
 def pre_quadratic_gradient_factory(model, functional_operator, source=None):
+    if isinstance(functional_operator, L2_Regularizer):
+        return jax.jit(lambda params, x: 0.)
     operator_on_model = make_operator_on_model(model, functional_operator)
     if source is None:
         source = null_source

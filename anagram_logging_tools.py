@@ -144,6 +144,8 @@ def plot_NTK(path: str,
 def write_weights(path: str, iteration: int|str, params: Iterable[jax.typing.ArrayLike]):
     jax.numpy.savez(os.path.join(path, 'weights_{}'.format(iteration)), *jax.tree_util.tree_leaves(params))
 
+def write_singular_values(path: str, iteration: int|str, singular_values: jax.typing.ArrayLike):
+    jax.numpy.savez(os.path.join(path, 'sv_{}'.format(iteration)), singular_values)
 
 def write_to_tensorboard(output: str|tfsum.SummaryWriter, iteration: int, metrics: dict[str, jax.typing.ArrayLike]):
     summary_writer = tfsum.create_file_writer(output) if isinstance(output, str) else output
