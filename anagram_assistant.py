@@ -19,9 +19,12 @@ from matplotlib import colors
 from matplotlib import pyplot as plt
 import jax
 import jax.numpy as jnp
+import optax
 import numpy as np
 from anagram_optimizer import l2_square_norm, Optimizer
-from adam_optimizer import AdamOptimizer
+# from adam_optimizer import AdamOptimizer
+from pinns_optimizer import PinnsOptimizer
+from classical_methods_utility import scale_by_line_search, adam_lbfgs, lbfgs
 from anagram_logging_tools import write_to_tensorboard, write_singular_values, write_weights, plot_NTK, plot_NNTK #, plot_Green
 from ngrad.models import mlp, init_params
 import time
@@ -37,6 +40,13 @@ class Parameters(dict):
     __setattr__ = dict.__setitem__
     __delattr__ = dict.__delitem__
 
+class LossTemporalParadoxer:
+    def __init__(self):
+        self.loss = None
+
+    #@jax.jit
+    def __call__(self, params):
+        return self.loss(params)
 
 # Default Parameters
 def default_parameters_factory(input_dim, output_dim,
@@ -51,7 +61,7 @@ def default_parameters_factory(input_dim, output_dim,
          'save_final_weights': False,
          'weights_verbosity': 0,
          'sv_verbosity': 0,
-         'tb_verbosity': 0,
+         'tb_verbosity': 10,
          'NNTK_verbosity': 0,
          'NTK_verbosity': 0,
          'Green_verbosity': 0,
@@ -66,7 +76,8 @@ def default_parameters_factory(input_dim, output_dim,
          'log_rank': False,
          'log_biggest_sv': False,
          'log_proportion_last_layer': False,
-         'Adam_lr': 0.,
+         # 'Adam_lr': 0.,
+         'optimizer': 'anagram',
          }
     )
 
@@ -149,9 +160,15 @@ def create_parser():
                         help="Log the norm proportion of the last layer update in tensorboard",
                         action="store_true")
 
-    parser.add_argument("--Adam",
-                        help="Use Adam instead of ANaGRAM by giving the learning rate [0. means no Adam]",
-                        type=float)
+    # parser.add_argument("--Adam",
+    #                     help="Use Adam instead of ANaGRAM by giving the learning rate [0. means no Adam]",
+    #                     type=float)
+
+    parser.add_argument("-opt", "--optimizer",
+                        help="Specify which optimizer should be used",
+                        choices=['adam', 'sgd', 'anagram', 'adam-lbfgs', 'lbfgs', 'engd'],
+                        # default='anagram',
+                        type=str)
 
     return parser
 
@@ -179,7 +196,8 @@ def parse(args, default_params):
         'log_rank': 'log_svd_rank',
         'log_biggest_sv': 'log_biggest_singular_value',
         'log_proportion_last_layer': 'log_proportion_last_layer',
-        'Adam_lr': 'Adam',
+        # 'Adam_lr': 'Adam',
+        'optimizer': 'optimizer',
     }
 
     if ap.layer_sizes is not None and not (dp.layer_sizes[0] == ap.layer_sizes[0] and dp.layer_sizes[-1] == ap.layer_sizes[-1]):
@@ -343,10 +361,41 @@ class Assistant:
         else:
             self.L2_error = self.H1_error = None
 
-        if self.Adam_lr > 0.:
-            self.optimizer = AdamOptimizer(self.model, make_integrators_samples(integrators[:-1]), operators, sources, self.Adam_lr)
-        else:
-            self.optimizer = Optimizer(self.model, make_integrators_samples(integrators[:-1]), operators, sources, self.rcond, self.rcond_relative_to_bigger_sv)
+        # if self.Adam_lr > 0.:
+        #     self.optimizer = AdamOptimizer(self.model, make_integrators_samples(integrators[:-1]), operators, sources, self.Adam_lr)
+        # else:
+        #     self.optimizer = Optimizer(self.model, make_integrators_samples(integrators[:-1]), operators, sources, self.rcond, self.rcond_relative_to_bigger_sv)
+
+        if self.optimizer == 'anagram':
+            self.optimizer = Optimizer(self.model, make_integrators_samples(integrators[:-1]), operators, sources,
+                                       self.rcond, self.rcond_relative_to_bigger_sv)
+        elif self.optimizer == 'adam':
+            self.optimizer = PinnsOptimizer(self.model, make_integrators_samples(integrators[:-1]), operators, sources,
+                                            solver=optax.adam(optax.piecewise_constant_schedule(1e-3,
+                                                                                                {15000: .1, 25000: .1,
+                                                                                                 35000: .1,
+                                                                                                 45000: .1})))
+        elif self.optimizer == 'sgd':
+            grid = jnp.linspace(0, 30, 31)
+            steps = 0.5 ** grid
+            losstp = LossTemporalParadoxer()
+            self.optimizer = PinnsOptimizer(self.model, make_integrators_samples(integrators[:-1]), operators, sources,
+                                            solver=scale_by_line_search(losstp, steps))
+            losstp.loss = self.optimizer.tot_loss
+        elif self.optimizer == 'lbfgs':
+            grid = jnp.linspace(0, 30, 31)
+            steps = 0.5 ** grid
+            losstp = LossTemporalParadoxer()
+            self.optimizer = PinnsOptimizer(self.model, make_integrators_samples(integrators[:-1]), operators, sources,
+                                            solver=lbfgs(losstp, steps))
+            losstp.loss = self.optimizer.tot_loss
+        elif self.optimizer == 'adam-lbfgs':
+            grid = jnp.linspace(0, 30, 31)
+            steps = 0.5 ** grid
+            losstp = LossTemporalParadoxer()
+            self.optimizer = PinnsOptimizer(self.model, make_integrators_samples(integrators[:-1]), operators, sources,
+                                            solver=adam_lbfgs(15000, losstp, steps))
+            losstp.loss = self.optimizer.tot_loss
 
         self.start_time = time.time()
 

@@ -39,7 +39,7 @@ u_star = (eval_points, u_solution)
 ## THIS VALUE CAN BE OPTIMIZED
 rcond = None #1e-6
 expe_parameters = default_parameters_factory(input_dim=2, output_dim=1, expe_name=os.path.basename(__file__),
-                                             n_inner_samples=64, n_boundary_samples=64, n_eval_samples=eval_points.shape[0], rcond=rcond)
+                                             n_inner_samples=240, n_boundary_samples=240, n_eval_samples=eval_points.shape[0], rcond=rcond)
 expe_parameters.layer_sizes = [2, 32, 64, 1] #[2, 64, 64, 1]
 
 if __name__ == '__main__':
@@ -70,9 +70,11 @@ if __name__ == '__main__':
 
 def get_space_points(n_samples):
     eff_n_samples = n_samples // 4
-    x_p_log = jnp.logspace(-20., -6., eff_n_samples, base=2.)
+    x_p_lin = jnp.linspace(2, 32, eff_n_samples)
+    x_p_log = .5 ** x_p_lin
+    #x_p_log = jnp.logspace(-20., -6., eff_n_samples, base=2.)
     x_m_log = -x_p_log[::-1]
-    x_m = jnp.linspace(-1., -.5**6, eff_n_samples, endpoint=False)
+    x_m = jnp.linspace(-1., -.25, eff_n_samples, endpoint=False)
     x_p = -x_m[::-1]
     return jnp.concatenate((x_m, x_m_log, jnp.zeros(1), x_p_log, x_p))
 
