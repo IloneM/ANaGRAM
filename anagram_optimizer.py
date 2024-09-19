@@ -38,7 +38,8 @@ class Optimizer:
                  functional_operators: Iterable[Callable[Callable[[jax.typing.ArrayLike], jax.Array], Callable[[jax.typing.ArrayLike], jax.Array]]],
                  sources: Callable[[jax.typing.ArrayLike], jax.Array]|None = None,
                  rcond: int|None = None,
-                 rcond_relative_to_bigger_sv: bool = True):
+                 rcond_relative_to_bigger_sv: bool = True,
+                 test_loss_samples: Iterable[jax.typing.ArrayLike]|None = None):
         self.model = model
         self.functional_operators = functional_operators
 
@@ -49,6 +50,7 @@ class Optimizer:
         self.loss_samples = loss_samples
         
         self.losses = tuple(quadratic_loss_factory(model, fo, sa, so) for fo, sa, so in zip(functional_operators, loss_samples, sources))
+        self.test_losses = tuple(quadratic_loss_factory(model, fo, sa, so) for fo, sa, so in zip(functional_operators, test_loss_samples, sources))
         self.tot_loss = jax.jit(lambda params: sum(lo(params) for lo in self.losses))
         
         grid = jnp.linspace(0, 30, 31)
