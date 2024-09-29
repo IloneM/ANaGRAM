@@ -78,6 +78,7 @@ def default_parameters_factory(input_dim, output_dim,
          'log_proportion_last_layer': False,
          # 'Adam_lr': 0.,
          'optimizer': 'anagram',
+         'switch_step': 15000,
          }
     )
 
@@ -170,6 +171,10 @@ def create_parser():
                         # default='anagram',
                         type=str)
 
+    parser.add_argument("-ss", "--switch_step",
+                        help="The step from which one should switch from adam to l-bfgs when using adam-lbfgs optimizer",
+                        type=int)
+
     return parser
 
 
@@ -198,6 +203,7 @@ def parse(args, default_params):
         'log_proportion_last_layer': 'log_proportion_last_layer',
         # 'Adam_lr': 'Adam',
         'optimizer': 'optimizer',
+        'switch_step': 'switch_step',
     }
 
     if ap.layer_sizes is not None and not (dp.layer_sizes[0] == ap.layer_sizes[0] and dp.layer_sizes[-1] == ap.layer_sizes[-1]):
@@ -252,7 +258,8 @@ class Assistant:
                  operators,
                  expe_parameters,
                  sources=None,
-                 solution=None):
+                 solution=None,
+                 test_integrators=None):
         if len(integrators) == len(operators): # in this case last integrator is interior integrator and used as eval integrator
             self.batch_samples = make_integrators_samples(integrators)
         elif len(integrators) == len(operators)+1: # in this case last integrator is eval integrator
@@ -260,6 +267,12 @@ class Assistant:
         else:
             raise ValueError('The number of operators should match the number of integrators')
         self.eval_samples = make_integrator_sample(integrators[-1])
+
+        if test_integrators is not None:
+            assert len(test_integrators) == len(operators)
+            self.test_samples = make_integrators_samples(test_integrators)
+        else:
+            self.test_samples = None
 
         if sources is not None and not len(sources) == len(operators):
             raise ValueError('The number of operators should match the number of sources')
@@ -270,7 +283,8 @@ class Assistant:
             setattr(self, key, val)
 
         for key in {'verbosity', 'tb_verbosity', 'weights_verbosity', 'sv_verbosity',
-                    'NNTK_verbosity', 'NTK_verbosity', 'Green_verbosity'}:
+                    'NNTK_verbosity', 'NTK_verbosity', 'Green_verbosity', 'nsteps',
+                    'switch_step'}:
             setattr(self, key, max(ep[key], 0))
 
         test_expe_name_is_file = None if self.expe_name is None else re.match('^([^\.]*)(?:\.[a-zA-Z]*)$', self.expe_name)
@@ -368,9 +382,10 @@ class Assistant:
 
         if self.optimizer == 'anagram':
             self.optimizer = Optimizer(self.model, make_integrators_samples(integrators[:-1]), operators, sources,
-                                       self.rcond, self.rcond_relative_to_bigger_sv)
+                                       self.rcond, self.rcond_relative_to_bigger_sv, self.test_samples)
         elif self.optimizer == 'adam':
             self.optimizer = PinnsOptimizer(self.model, make_integrators_samples(integrators[:-1]), operators, sources,
+                                            self.test_samples,
                                             solver=optax.adam(optax.piecewise_constant_schedule(1e-3,
                                                                                                 {15000: .1, 25000: .1,
                                                                                                  35000: .1,
@@ -380,6 +395,7 @@ class Assistant:
             steps = 0.5 ** grid
             losstp = LossTemporalParadoxer()
             self.optimizer = PinnsOptimizer(self.model, make_integrators_samples(integrators[:-1]), operators, sources,
+                                            self.test_samples,
                                             solver=scale_by_line_search(losstp, steps))
             losstp.loss = self.optimizer.tot_loss
         elif self.optimizer == 'lbfgs':
@@ -387,6 +403,7 @@ class Assistant:
             steps = 0.5 ** grid
             losstp = LossTemporalParadoxer()
             self.optimizer = PinnsOptimizer(self.model, make_integrators_samples(integrators[:-1]), operators, sources,
+                                            self.test_samples,
                                             solver=lbfgs(losstp, steps))
             losstp.loss = self.optimizer.tot_loss
         elif self.optimizer == 'adam-lbfgs':
@@ -394,7 +411,8 @@ class Assistant:
             steps = 0.5 ** grid
             losstp = LossTemporalParadoxer()
             self.optimizer = PinnsOptimizer(self.model, make_integrators_samples(integrators[:-1]), operators, sources,
-                                            solver=adam_lbfgs(15000, losstp, steps))
+                                            self.test_samples,
+                                            solver=adam_lbfgs(self.switch_step, losstp, steps))
             losstp.loss = self.optimizer.tot_loss
 
         self.start_time = time.time()
@@ -426,6 +444,7 @@ class Assistant:
             l2_error = None if self.L2_error is None else self.L2_error(params)
             h1_error = None if self.H1_error is None else self.H1_error(params)
             loss = optimizer.tot_loss(params)
+            test_loss = None if optimizer.test_tot_loss is None else optimizer.test_tot_loss(params)
 
             # Time calculation
             actual_time = time.time()
@@ -433,7 +452,8 @@ class Assistant:
             elapsed_time = actual_time - self.start_time
 
             print(
-                f'NGD Iteration: {iteration} with loss: {loss}, ' +
+                f'NGD Iteration: {iteration} with loss: {loss}, '+
+                ('' if test_loss is None else f'test loss: {test_loss}, ') +
                 ('' if l2_error is None else f'error L2: {l2_error}, ') +
                 ('' if h1_error is None else f'error H1: {h1_error}, ') +
                 f'and step: {actual_step}\n'
@@ -448,13 +468,19 @@ class Assistant:
                 l2_error = None if self.L2_error is None else self.L2_error(params)
                 elapsed_time = time.time() - self.start_time
                 loss = optimizer.tot_loss(params)
+                test_loss = None if optimizer.test_tot_loss is None else optimizer.test_tot_loss(params)
             if h1_error is None:
                 h1_error = None if self.H1_error is None else self.H1_error(params)
 
             metrics = dict({
-                'loss': loss, 'lr': actual_step,
+                'loss': loss,
+                'lr': actual_step,
                 'elapsed_time': elapsed_time,
-            }, **{f'{op_name}_loss': op(params) for op_name, op in zip(self.operators_names, optimizer.losses)})
+            }, **{f'{op_name}_loss': lo(params) for op_name, lo in zip(self.operators_names, optimizer.losses)})
+            if optimizer.test_losses is not None:
+                metrics['test_loss']= test_loss
+                metrics = dict(metrics, **{f'{op_name}_test_loss': lo(params)
+                                           for op_name, lo in zip(self.operators_names, optimizer.test_losses)})
 
             if l2_error is not None:
                 metrics['l2_error'] = l2_error

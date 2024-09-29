@@ -51,7 +51,8 @@ def adam_lbfgs(switch_step, loss, steps,
     if kwargs_lbfgs is None:
         kwargs_lbfgs = dict()
 
-    kwargs_lbfgs['linesearch'] = scale_by_line_search(loss, steps)
+    #kwargs_lbfgs['linesearch'] = scale_by_line_search(loss, steps)
+    kwargs_lbfgs['linesearch'] = optax.scale_by_zoom_linesearch(max_linesearch_steps=15)
 
     return optax.chain(optax.transforms.conditionally_transform(optax.adam(lr_adam, *args_adam, **kwargs_adam),
                                                                 update_until_nsteps(switch_step)),
@@ -64,6 +65,7 @@ def lbfgs(loss, steps, args_lbfgs=None, kwargs_lbfgs=None):
     if kwargs_lbfgs is None:
         kwargs_lbfgs = dict()
 
-    kwargs_lbfgs['linesearch'] = scale_by_line_search(loss, steps)
+    #kwargs_lbfgs['linesearch'] = scale_by_line_search(loss, steps)
+    kwargs_lbfgs['linesearch'] = optax.scale_by_zoom_linesearch(max_linesearch_steps=15)
 
     return optax.lbfgs(None, *args_lbfgs, **kwargs_lbfgs)
