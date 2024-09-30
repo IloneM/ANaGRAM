@@ -24,9 +24,10 @@ import numpy as np
 from anagram_optimizer import l2_square_norm, Optimizer
 # from adam_optimizer import AdamOptimizer
 from pinns_optimizer import PinnsOptimizer
-from classical_methods_utility import scale_by_line_search, adam_lbfgs, lbfgs
+from classical_methods_utility import scale_by_line_search, adam_lbfgs, lbfgs, engd
 from anagram_logging_tools import write_to_tensorboard, write_singular_values, write_weights, plot_NTK, plot_NNTK #, plot_Green
 from ngrad.models import mlp, init_params
+from functools import partial
 import time
 
 # Specify the class in __all__
@@ -44,7 +45,7 @@ class LossTemporalParadoxer:
     def __init__(self):
         self.loss = None
 
-    #@jax.jit
+    @partial(jax.jit, static_argnums=(0,))
     def __call__(self, params):
         return self.loss(params)
 
@@ -259,7 +260,8 @@ class Assistant:
                  expe_parameters,
                  sources=None,
                  solution=None,
-                 test_integrators=None):
+                 test_integrators=None,
+                 make_gram_on_model=None): #This last one is only for engd
         if len(integrators) == len(operators): # in this case last integrator is interior integrator and used as eval integrator
             self.batch_samples = make_integrators_samples(integrators)
         elif len(integrators) == len(operators)+1: # in this case last integrator is eval integrator
@@ -383,6 +385,16 @@ class Assistant:
         if self.optimizer == 'anagram':
             self.optimizer = Optimizer(self.model, make_integrators_samples(integrators[:-1]), operators, sources,
                                        self.rcond, self.rcond_relative_to_bigger_sv, self.test_samples)
+        if self.optimizer == 'engd':
+            assert make_gram_on_model is not None
+            grid = jnp.linspace(0, 30, 31)
+            steps = 0.5 ** grid
+            losstp = LossTemporalParadoxer()
+            self.optimizer = PinnsOptimizer(self.model, make_integrators_samples(integrators[:-1]), operators, sources,
+                                            self.test_samples,
+                                            solver=engd(losstp, steps, make_gram_on_model(self.model)))
+            losstp.loss = self.optimizer.tot_loss
+
         elif self.optimizer == 'adam':
             self.optimizer = PinnsOptimizer(self.model, make_integrators_samples(integrators[:-1]), operators, sources,
                                             self.test_samples,
@@ -399,20 +411,20 @@ class Assistant:
                                             solver=scale_by_line_search(losstp, steps))
             losstp.loss = self.optimizer.tot_loss
         elif self.optimizer == 'lbfgs':
-            grid = jnp.linspace(0, 30, 31)
-            steps = 0.5 ** grid
+            # grid = jnp.linspace(0, 30, 31)
+            # steps = 0.5 ** grid
             losstp = LossTemporalParadoxer()
             self.optimizer = PinnsOptimizer(self.model, make_integrators_samples(integrators[:-1]), operators, sources,
                                             self.test_samples,
-                                            solver=lbfgs(losstp, steps))
+                                            solver=lbfgs(losstp)) #, steps))
             losstp.loss = self.optimizer.tot_loss
         elif self.optimizer == 'adam-lbfgs':
-            grid = jnp.linspace(0, 30, 31)
-            steps = 0.5 ** grid
+            # grid = jnp.linspace(0, 30, 31)
+            # steps = 0.5 ** grid
             losstp = LossTemporalParadoxer()
             self.optimizer = PinnsOptimizer(self.model, make_integrators_samples(integrators[:-1]), operators, sources,
                                             self.test_samples,
-                                            solver=adam_lbfgs(self.switch_step, losstp, steps))
+                                            solver=adam_lbfgs(self.switch_step, losstp)) # , steps))
             losstp.loss = self.optimizer.tot_loss
 
         self.start_time = time.time()

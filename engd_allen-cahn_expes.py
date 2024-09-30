@@ -33,6 +33,8 @@ print('using device : {}'.format(xla_bridge.get_backend().platform))
 
 from scipy.io import loadmat
 from numpy import loadtxt
+from ngrad.inner import model_identity, model_del_i_factory
+from classical_methods_utility import make_gram_on_model_factory
 
 # Adapted from https://deepxde.readthedocs.io/en/latest/demos/pinn_forward/allen.cahn.html
 def gen_testdata():
@@ -60,6 +62,7 @@ ep = expe_parameters = default_parameters_factory(
     n_inner_samples=30, n_boundary_samples=30, n_eval_samples=eval_points.shape[0], rcond=rcond)
 expe_parameters.layer_sizes = [2, 20, 20, 20, 1]
 expe_parameters.nsteps = 4001
+expe_parameters.optimizer = 'engd'
 
 if __name__ == '__main__':
     args_parser = create_parser()
@@ -74,8 +77,8 @@ lboundary = RectangleBoundary([[0.,1.], [-1.,1.]], side_number=2)
 
 # integrators
 interior_integrator = DeterministicIntegrator(interior, ep.n_inner_samples)
-initial_integrator = jnp.stack((jnp.zeros(41),jnp.linspace(-1, 1, 41)), axis=1)
-# initial_integrator = DeterministicIntegrator(initial, ep.n_boundary_samples)
+#initial_integrator = jnp.stack((jnp.zeros(41),jnp.linspace(-1, 1, 41)), axis=1)
+initial_integrator = DeterministicIntegrator(initial, ep.n_boundary_samples)
 rboundary_integrator = DeterministicIntegrator(rboundary, ep.n_boundary_samples)
 lboundary_integrator = DeterministicIntegrator(lboundary, ep.n_boundary_samples)
 
@@ -102,9 +105,34 @@ sources = (u_0, minus_one, minus_one, null_source)
 ## Diffusivity
 dconst = 0.001
 
+# gramians
+model_del_0 = model_del_i_factory(argnum=0)
+model_del_1 = model_del_i_factory(argnum=1)
+
+def model_allen_cahn_eq_factory(diffusivity=1.):
+    def model_flat_allen_cahn_eq(u_theta, g):
+        lin_dt = model_del_0(u_theta, g)
+        lin_ddx = model_del_1(u_theta, (model_del_1(u_theta, g)))
+
+        def flat_allen_cahn_eq(x):
+            u_ev = u_theta(x)
+            du_ev, _ = jax.flatten_util.ravel_pytree(g(x))
+            flat_dt, _ = jax.flatten_util.ravel_pytree(lin_dt(x))
+            flat_ddx, unravel = jax.flatten_util.ravel_pytree(lin_ddx(x))
+            return unravel(flat_dt - diffusivity * flat_ddx -5. * (du_ev - 3. * u_ev ** 2 * du_ev))
+
+        return jax.jit(flat_allen_cahn_eq)
+
+    return model_flat_allen_cahn_eq
+
+gram_on_model_factory = make_gram_on_model_factory((model_identity, model_identity,
+                                                    model_identity, model_allen_cahn_eq_factory(dconst)),
+                                                   (initial_integrator, rboundary_integrator,
+                                                    lboundary_integrator, interior_integrator))
+
 # differential operators
 dt = lambda g: del_i(g, 0)
-dx = lambda g: del_i(g, 1)
+# dx = lambda g: del_i(g, 1)
 ddx = lambda g: del_i(del_i(g, 1), 1)
 def allen_cahn_operator(u):
     @jax.jit
@@ -126,6 +154,7 @@ for seed in seeds:
         expe_parameters,
         sources,
         u_star,
-        test_integrators)
+        test_integrators,
+        make_gram_on_model=gram_on_model_factory)
 
     assistant.optimize()

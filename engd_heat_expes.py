@@ -25,6 +25,8 @@ from anagram import identity_operator, null_source
 from ngrad.utility import del_i
 from anagram_assistant import *
 from numpy import loadtxt
+from ngrad.inner import model_identity, model_del_i_factory
+from classical_methods_utility import make_gram_on_model_factory
 
 jax.config.update("jax_enable_x64", True)
 from jax.lib import xla_bridge
@@ -37,6 +39,7 @@ expe_parameters = default_parameters_factory(input_dim=2, output_dim=1, expe_nam
                                              n_inner_samples=30, n_boundary_samples=30, n_eval_samples=300, rcond=rcond)
 expe_parameters.layer_sizes = [2, 64, 1]
 expe_parameters.nsteps = 1001
+expe_parameters.optimizer = 'engd'
 # expe_parameters.rcond_relative_to_bigger_sv = False
 
 
@@ -87,6 +90,30 @@ def u_star(tx):
 ## CHANGE THIS IF NEEDED
 expe_diffusivity = .25
 
+# gramians
+# defining heat eq inner product
+model_del_0 = model_del_i_factory(argnum=0)
+model_del_1 = model_del_i_factory(argnum=1)
+
+def model_heat_eq_factory(diffusivity=1.):
+    def model_heat_eq(u_theta, g):
+        dg_1 = model_del_0(u_theta, g)
+        ddg_2 = model_del_1(u_theta, (model_del_1(u_theta, g)))
+
+        def return_heat_eq(x):
+            flat_dg_1, unravel = jax.flatten_util.ravel_pytree(dg_1(x))
+            flat_ddg_2, unravel = jax.flatten_util.ravel_pytree(ddg_2(x))
+            return unravel(flat_dg_1 - diffusivity * flat_ddg_2)
+
+        return return_heat_eq
+
+    return model_heat_eq
+
+gram_on_model_factory = make_gram_on_model_factory((model_identity, model_identity,
+                                                    model_identity, model_heat_eq_factory(expe_diffusivity)),
+                                                   (lboundary_integrator, rboundary_integrator,
+                                                    initial_integrator, interior_integrator))
+
 # differential operators
 dt = lambda g: del_i(g, 0)
 ddx = lambda g: del_i(del_i(g, 1), 1)
@@ -95,11 +122,9 @@ def heat_operator(u):
 
 functional_operators = dict(initial=identity_operator, rboundary=identity_operator, lboundary=identity_operator, interior=heat_operator)
 
-seeds = jnp.array(loadtxt('./seeds', dtype=int))
-seeds_failed = jnp.array(loadtxt('./seeds-heat_failed-all', dtype=int))
-seeds_normal = jnp.setdiff1d(seeds, seeds_failed)
+seeds = jnp.array(loadtxt('./seeds', dtype=int)) #'./seeds-heat_failed2'
 
-for seed in seeds_normal:
+for seed in seeds:
     expe_parameters.seed = seed
     assistant = Assistant(
         integrators,
@@ -108,21 +133,7 @@ for seed in seeds_normal:
         sources,
         u_star,
         test_integrators,
-    )
-
-    assistant.optimize()
-
-expe_parameters.nsteps = 3001
-
-for seed in seeds_failed:
-    expe_parameters.seed = seed
-    assistant = Assistant(
-        integrators,
-        functional_operators,
-        expe_parameters,
-        sources,
-        u_star,
-        test_integrators,
+        make_gram_on_model=gram_on_model_factory,
     )
 
     assistant.optimize()
