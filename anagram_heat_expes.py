@@ -31,13 +31,13 @@ from jax.lib import xla_bridge
 print('using device : {}'.format(xla_bridge.get_backend().platform))
 
 ## THIS VALUE CAN BE OPTIMIZED
-rcond = None #1e-6
+rcond = 1e-5 #None
 
 expe_parameters = default_parameters_factory(input_dim=2, output_dim=1, expe_name=os.path.basename(__file__),
                                              n_inner_samples=30, n_boundary_samples=30, n_eval_samples=300, rcond=rcond)
 expe_parameters.layer_sizes = [2, 64, 1]
-expe_parameters.nsteps = 1001
-# expe_parameters.rcond_relative_to_bigger_sv = False
+expe_parameters.nsteps = 2001
+expe_parameters.rcond_relative_to_bigger_sv = False
 
 
 if __name__ == '__main__':
@@ -95,7 +95,7 @@ def heat_operator(u):
 
 functional_operators = dict(initial=identity_operator, rboundary=identity_operator, lboundary=identity_operator, interior=heat_operator)
 
-seeds = jnp.array(loadtxt('./seeds', dtype=int))
+seeds = jnp.array(loadtxt('./seeds-heat-anagram-failed', dtype=int))
 
 for seed in seeds:
     expe_parameters.seed = seed

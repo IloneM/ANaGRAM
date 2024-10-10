@@ -74,8 +74,8 @@ lboundary = RectangleBoundary([[0.,1.], [-1.,1.]], side_number=2)
 
 # integrators
 interior_integrator = DeterministicIntegrator(interior, ep.n_inner_samples)
-initial_integrator = jnp.stack((jnp.zeros(41),jnp.linspace(-1, 1, 41)), axis=1)
-# initial_integrator = DeterministicIntegrator(initial, ep.n_boundary_samples)
+# initial_integrator = jnp.stack((jnp.zeros(41),jnp.linspace(-1, 1, 41)), axis=1)
+initial_integrator = DeterministicIntegrator(initial, ep.n_boundary_samples)
 rboundary_integrator = DeterministicIntegrator(rboundary, ep.n_boundary_samples)
 lboundary_integrator = DeterministicIntegrator(lboundary, ep.n_boundary_samples)
 
@@ -116,7 +116,7 @@ def allen_cahn_operator(u):
 
 functional_operators = dict(initial=identity_operator, rboundary=identity_operator, lboundary=identity_operator, interior=allen_cahn_operator)
 
-seeds = jnp.array(loadtxt('./seeds-limited', dtype=int))
+seeds = jnp.array(loadtxt('./seeds-limited-complement', dtype=int))
 
 for seed in seeds:
     expe_parameters.seed = seed

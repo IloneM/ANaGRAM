@@ -104,6 +104,7 @@ def create_parser():
 
     parser.add_argument("-sfw", "--save_final_weights",
                         help="Save final weights of the neural network",
+                        default=None,
                         action="store_true")
 
     parser.add_argument("-lw", "--log_weights",
@@ -148,18 +149,22 @@ def create_parser():
 
     parser.add_argument("-rabs", "--rcond_absolute",
                         help="If set, then rcond is taken as an absolute value and not relative to biggest singular value",
+                        default=None,
                         action="store_false")
 
     parser.add_argument("-lrk", "--log_svd_rank",
                         help="Log the rank of the svd used for natural gradient in tensorboard",
+                        default=None,
                         action="store_true")
 
     parser.add_argument("-lbsv", "--log_biggest_singular_value",
                         help="Log the biggest singular value of the svd used for natural gradient in tensorboard",
+                        default=None,
                         action="store_true")
 
     parser.add_argument("--log_proportion_last_layer",
                         help="Log the norm proportion of the last layer update in tensorboard",
+                        default=None,
                         action="store_true")
 
     # parser.add_argument("--Adam",

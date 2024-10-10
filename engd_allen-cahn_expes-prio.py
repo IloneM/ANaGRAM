@@ -152,7 +152,7 @@ def allen_cahn_operator(u):
 
 functional_operators = dict(initial=identity_operator, rboundary=identity_operator, lboundary=identity_operator, interior=allen_cahn_operator)
 
-seeds = jnp.array(loadtxt('./seeds-very-limited', dtype=int))
+seeds = [6865] #jnp.array(loadtxt('./seeds-limited', dtype=int))
 
 for seed in seeds:
     expe_parameters.seed = seed

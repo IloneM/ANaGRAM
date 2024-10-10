@@ -106,6 +106,7 @@ def make_gram_on_model_factory(trafos, integrators):
     def make_gram_on_model(model):
         grams = [gram_factory(model, trafo, integrator) for trafo, integrator in zip(trafos, integrators)]
         return jax.jit(lambda params: sum([gram(params) for gram in grams]))
+        # return jax.jit(lambda params: jnp.sum(jnp.stack([gram(params) for gram in grams]), axis=0))
     return make_gram_on_model
 
 def engd(loss, steps, gram):

@@ -30,16 +30,19 @@ from jax.lib import xla_bridge
 print('using device : {}'.format(xla_bridge.get_backend().platform))
 
 ## THIS VALUE CAN BE OPTIMIZED
-rcond = None #1e-6
+rcond = 1e-7 #None #1e-6
 
 expe_parameters = default_parameters_factory(input_dim=2, output_dim=1, expe_name=os.path.basename(__file__),
                                              n_inner_samples=30, n_boundary_samples=30, n_eval_samples=300, rcond=rcond)
 expe_parameters.layer_sizes = [2, 64, 1]
+#expe_parameters.rcond_relative_to_bigger_sv = True
 
 if __name__ == '__main__':
     args_parser = create_parser()
     args = args_parser.parse_args()
     ep = expe_parameters = parse(args, expe_parameters)
+print('in expe', expe_parameters.rcond_relative_to_bigger_sv)
+print('in expe', expe_parameters.rcond)
 
 # domains
 interior = Square(1.)

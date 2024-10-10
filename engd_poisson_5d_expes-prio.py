@@ -74,7 +74,7 @@ laplace_operator = lambda u: laplacian(u, tuple(range(dim)))
 
 functional_operators = dict(boundary=identity_operator, interior=laplace_operator)
 
-seeds = jnp.array(loadtxt('./seeds-limited', dtype=int))
+seeds = [6865] #jnp.array(loadtxt('./seeds-limited', dtype=int))
 
 for seed in seeds:
     expe_parameters.seed = seed
