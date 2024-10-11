@@ -32,6 +32,7 @@ from jax.lib import xla_bridge
 print('using device : {}'.format(xla_bridge.get_backend().platform))
 
 from scipy.io import loadmat
+from numpy import loadtxt
 
 # Adapted from https://deepxde.readthedocs.io/en/latest/demos/pinn_forward/allen.cahn.html
 def gen_testdata():
@@ -58,7 +59,7 @@ ep = expe_parameters = default_parameters_factory(
     input_dim=2, output_dim=1, expe_name=os.path.basename(__file__),
     n_inner_samples=30, n_boundary_samples=30, n_eval_samples=eval_points.shape[0], rcond=rcond)
 expe_parameters.layer_sizes = [2, 20, 20, 20, 1]
-expe_parameters.nsteps = 1001
+expe_parameters.nsteps = 4001
 
 if __name__ == '__main__':
     args_parser = create_parser()
@@ -73,8 +74,7 @@ lboundary = RectangleBoundary([[0.,1.], [-1.,1.]], side_number=2)
 
 # integrators
 interior_integrator = DeterministicIntegrator(interior, ep.n_inner_samples)
-initial_integrator = jnp.stack((jnp.zeros(41),jnp.linspace(-1, 1, 41)), axis=1)
-# initial_integrator = DeterministicIntegrator(initial, ep.n_boundary_samples)
+initial_integrator = DeterministicIntegrator(initial, ep.n_boundary_samples)
 rboundary_integrator = DeterministicIntegrator(rboundary, ep.n_boundary_samples)
 lboundary_integrator = DeterministicIntegrator(lboundary, ep.n_boundary_samples)
 
@@ -82,7 +82,7 @@ integrators = (initial_integrator, rboundary_integrator, lboundary_integrator, i
 
 
 test_interior_integrator = DeterministicIntegrator(interior, ep.n_inner_samples * 5)
-test_initial_integrator = jnp.stack((jnp.zeros(205),jnp.linspace(-1, 1, 205)), axis=1) #DeterministicIntegrator(initial, ep.n_boundary_samples)
+test_initial_integrator = DeterministicIntegrator(initial, ep.n_boundary_samples * 5)
 test_rboundary_integrator = DeterministicIntegrator(rboundary, ep.n_boundary_samples * 5)
 test_lboundary_integrator = DeterministicIntegrator(lboundary, ep.n_boundary_samples * 5)
 test_integrators = (test_initial_integrator, test_rboundary_integrator, test_lboundary_integrator, test_interior_integrator)
@@ -115,12 +115,16 @@ def allen_cahn_operator(u):
 
 functional_operators = dict(initial=identity_operator, rboundary=identity_operator, lboundary=identity_operator, interior=allen_cahn_operator)
 
-assistant = Assistant(
-    integrators,
-    functional_operators,
-    expe_parameters,
-    sources,
-    u_star)
-    # test_integrators)
+seeds = jnp.array(loadtxt('./seeds', dtype=int))
 
-assistant.optimize()
+for seed in seeds:
+    expe_parameters.seed = seed
+    assistant = Assistant(
+        integrators,
+        functional_operators,
+        expe_parameters,
+        sources,
+        u_star,
+        test_integrators)
+
+    assistant.optimize()
