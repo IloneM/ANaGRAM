@@ -10,12 +10,15 @@ import os
 
 if '__file__' in globals():
     # If the code is running in a script, use the directory of the script file
-    subfolder_path = os.path.join(os.path.dirname(__file__), '..', 'Natural-Gradient-PINNs-ICML23')
+    subfolder_paths = (os.path.join(os.path.dirname(__file__), '..', 'Natural-Gradient-PINNs-ICML23'),
+                       os.path.join(os.path.dirname(__file__), '..'))
 else:
     # If the code is running interactively, use the current working directory
-    subfolder_path = os.path.join(os.getcwd(), '..', 'Natural-Gradient-PINNs-ICML23')
+    subfolder_paths = (os.path.join(os.getcwd(), '..', 'Natural-Gradient-PINNs-ICML23'),
+                       os.path.join(os.getcwd(), '..'))
 # Add the subfolder to the system path
-sys.path.append(subfolder_path)
+for subfolder_path in subfolder_paths:
+    sys.path.append(subfolder_path)
 
 import jax
 import jax.numpy as jnp
