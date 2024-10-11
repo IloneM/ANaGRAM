@@ -94,7 +94,7 @@ def heat_operator(u):
 
 functional_operators = dict(initial=identity_operator, rboundary=identity_operator, lboundary=identity_operator, interior=heat_operator)
 
-seeds = jnp.array(loadtxt('./seeds-heat-anagram-failed', dtype=int))
+seeds = jnp.array(loadtxt('./seeds', dtype=int))
 
 for seed in seeds:
     expe_parameters.seed = seed

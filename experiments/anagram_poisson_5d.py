@@ -24,6 +24,7 @@ from ngrad.integrators import EvolutionaryIntegrator
 from anagram import identity_operator, null_source, laplacian
 from anagram_assistant import *
 
+
 jax.config.update("jax_enable_x64", True)
 from jax.lib import xla_bridge
 print('using device : {}'.format(xla_bridge.get_backend().platform))
@@ -36,6 +37,7 @@ dim = 5
 
 expe_parameters = default_parameters_factory(input_dim=dim, output_dim=1, expe_name=os.path.basename(__file__),
                                              n_inner_samples=4000, n_boundary_samples=500, n_eval_samples=40000, rcond=rcond)
+expe_parameters.nsteps = 1001
 
 # random seed
 # expe_parameters.seed = 0
