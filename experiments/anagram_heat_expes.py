@@ -39,7 +39,6 @@ expe_parameters.layer_sizes = [2, 64, 1]
 expe_parameters.nsteps = 2001
 expe_parameters.rcond_relative_to_bigger_sv = False
 
-
 if __name__ == '__main__':
     args_parser = create_parser()
     args = args_parser.parse_args()
