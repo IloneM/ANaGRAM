@@ -77,7 +77,6 @@ def default_parameters_factory(input_dim, output_dim,
          'log_rank': False,
          'log_biggest_sv': False,
          'log_proportion_last_layer': False,
-         # 'Adam_lr': 0.,
          'optimizer': 'anagram',
          'switch_step': 15000,
          }
@@ -321,7 +320,7 @@ class Assistant:
                 if self.expe_name is None:
                     raise ValueError('You need to provide a path or an expe_name.')
                 else:
-                    self.expe_path = os.path.join('experiments', '{}_{}'.format(self.expe_name, datetime.now().strftime("%Y%m%d-%H%M%S")))
+                    self.expe_path = os.path.join('experiments-results', '{}_{}'.format(self.expe_name, datetime.now().strftime("%Y%m%d-%H%M%S")))
             try:
                 os.makedirs(self.expe_path)
             except FileExistsError as e:
@@ -332,7 +331,7 @@ class Assistant:
             tensorboard_folder_name = datetime.now().strftime("%Y%m%d-%H%M%S") if self.expe_name is None \
                                         else '{}_{}'.format(self.expe_name, datetime.now().strftime("%Y%m%d-%H%M%S"))
             if self.tensorboard_path is None:
-                self.tensorboard_path = os.path.join('experiments', 'tensorboard_logs')
+                self.tensorboard_path = os.path.join('experiments-results', 'tensorboard_logs')
             self.tensorboard_path = os.path.join(self.tensorboard_path, tensorboard_folder_name)
             self.summary_writer = tfsum.create_file_writer(self.tensorboard_path)
 

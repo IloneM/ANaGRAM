@@ -12,10 +12,10 @@ import numpy as np
 
 if '__file__' in globals():
     # If the code is running in a script, use the directory of the script file
-    subfolder_path = os.path.join(os.path.dirname(__file__), 'Natural-Gradient-PINNs-ICML23')
+    subfolder_path = os.path.join(os.path.dirname(__file__), '..', 'Natural-Gradient-PINNs-ICML23')
 else:
     # If the code is running interactively, use the current working directory
-    subfolder_path = os.path.join(os.getcwd(), 'Natural-Gradient-PINNs-ICML23')
+    subfolder_path = os.path.join(os.getcwd(), '..', 'Natural-Gradient-PINNs-ICML23')
 # Add the subfolder to the system path
 sys.path.append(subfolder_path)
 
