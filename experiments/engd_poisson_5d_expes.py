@@ -1,5 +1,5 @@
 """
-ANaGRAM Optimization.
+ENGD Optimization.
 Five dimensional Poisson equation example. Solution given by
 
 u(x) = sum_{i=1}^5 sin(pi * x_i)
@@ -41,9 +41,6 @@ expe_parameters = default_parameters_factory(input_dim=dim, output_dim=1, expe_n
                                              n_inner_samples=4000, n_boundary_samples=500, n_eval_samples=40000, rcond=rcond)
 expe_parameters.nsteps = 1001
 expe_parameters.optimizer = 'engd'
-
-# random seed
-# expe_parameters.seed = 0
 expe_parameters.layer_sizes = [dim, 64, 1]
 
 if __name__ == '__main__':
@@ -60,7 +57,6 @@ boundary = HypercubeBoundary(dim)
 @jax.jit
 def u_star(x):
     return (jnp.sum(jnp.sin(jnp.pi * x)))
-# v_u_star = vmap(u_star, (0))
 
 # rhs
 @jax.jit

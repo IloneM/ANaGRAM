@@ -38,9 +38,6 @@ dim = 5
 expe_parameters = default_parameters_factory(input_dim=dim, output_dim=1, expe_name=os.path.basename(__file__),
                                              n_inner_samples=4000, n_boundary_samples=500, n_eval_samples=40000, rcond=rcond)
 expe_parameters.nsteps = 1001
-
-# random seed
-# expe_parameters.seed = 0
 expe_parameters.layer_sizes = [dim, 64, 1]
 
 if __name__ == '__main__':
@@ -49,7 +46,6 @@ if __name__ == '__main__':
     ep = expe_parameters = parse(args, expe_parameters)
 
 # domains
-
 interior = Hyperrectangle([(0., 1.) for _ in range(0, dim)])
 boundary = HypercubeBoundary(dim)
 
@@ -57,7 +53,6 @@ boundary = HypercubeBoundary(dim)
 @jax.jit
 def u_star(x):
     return (jnp.sum(jnp.sin(jnp.pi * x)))
-# v_u_star = vmap(u_star, (0))
 
 # rhs
 @jax.jit

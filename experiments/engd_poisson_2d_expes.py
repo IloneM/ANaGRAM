@@ -1,8 +1,8 @@
 """
 ENGD Optimization.
-One dimensional heat equation example. Solution given by
+Two dimensional Poisson equation example. Solution given by
 
-u(t,x) = exp(pi**2 * t * 0.25) * sin(pi * x).
+u(x,y) = sin(pi*x) * sin(py*y).
 
 """
 import sys
@@ -32,11 +32,11 @@ from jax.lib import xla_bridge
 print('using device : {}'.format(xla_bridge.get_backend().platform))
 
 ### THIS VALUE CAN BE OPTIMIZED
-rcond = 1e-5
+rcond = None
 
 expe_parameters = default_parameters_factory(input_dim=2, output_dim=1, expe_name=os.path.basename(__file__),
                                              n_inner_samples=30, n_boundary_samples=30, n_eval_samples=200, rcond=rcond)
-expe_parameters.nsteps = 301
+expe_parameters.nsteps = 2001
 expe_parameters.optimizer = 'engd'
 
 if __name__ == '__main__':

@@ -1,5 +1,5 @@
 """
-ENGD Optimization.
+ANaGRAM Optimization.
 One dimensional heat equation example. Solution given by
 
 u(t,x) = exp(pi**2 * t * 0.25) * sin(pi * x).
@@ -31,7 +31,7 @@ from jax.lib import xla_bridge
 print('using device : {}'.format(xla_bridge.get_backend().platform))
 
 ## THIS VALUE CAN BE OPTIMIZED
-rcond = 1e-5 #None
+rcond = 1e-5
 
 expe_parameters = default_parameters_factory(input_dim=2, output_dim=1, expe_name=os.path.basename(__file__),
                                              n_inner_samples=30, n_boundary_samples=30, n_eval_samples=300, rcond=rcond)
@@ -71,7 +71,6 @@ test_integrators = (test_initial_integrator, test_rboundary_integrator, test_lbo
 def u_0(tx):
     x = tx[1]
     return jnp.sin(jnp.pi * x)
-# v_u_0 = vmap(u_0, (0))
 
 sources = (u_0, null_source, null_source, null_source)
 

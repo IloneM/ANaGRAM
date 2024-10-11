@@ -1,8 +1,8 @@
 """
 ENGD Optimization.
-One dimensional heat equation example. Solution given by
+Allen-Cahn equation equation example. Solution available at
 
-u(t,x) = exp(pi**2 * t * 0.25) * sin(pi * x).
+https://deepxde.readthedocs.io/en/latest/demos/pinn_forward/allen.cahn.html
 
 """
 import sys
@@ -53,10 +53,8 @@ eval_points = u_star[0]
 u_solution = u_star[1][:,0]
 u_star = (eval_points, u_solution)
 
-#num_domain=8000, num_boundary=400, num_initial=800
-
 ## THIS VALUE CAN BE OPTIMIZED
-rcond = None #1e-6
+rcond = None
 ep = expe_parameters = default_parameters_factory(
     input_dim=2, output_dim=1, expe_name=os.path.basename(__file__),
     n_inner_samples=30, n_boundary_samples=30, n_eval_samples=eval_points.shape[0], rcond=rcond)
@@ -86,7 +84,8 @@ integrators = (initial_integrator, rboundary_integrator, lboundary_integrator, i
 
 
 test_interior_integrator = DeterministicIntegrator(interior, ep.n_inner_samples * 5)
-test_initial_integrator = jnp.stack((jnp.zeros(205),jnp.linspace(-1, 1, 205)), axis=1) #DeterministicIntegrator(initial, ep.n_boundary_samples)
+test_initial_integrator = jnp.stack((jnp.zeros(205),jnp.linspace(-1, 1, 205)), axis=1)
+# test_initial_integrator = DeterministicIntegrator(initial, ep.n_boundary_samples)
 test_rboundary_integrator = DeterministicIntegrator(rboundary, ep.n_boundary_samples * 5)
 test_lboundary_integrator = DeterministicIntegrator(lboundary, ep.n_boundary_samples * 5)
 test_integrators = (test_initial_integrator, test_rboundary_integrator, test_lboundary_integrator, test_interior_integrator)
@@ -152,7 +151,7 @@ def allen_cahn_operator(u):
 
 functional_operators = dict(initial=identity_operator, rboundary=identity_operator, lboundary=identity_operator, interior=allen_cahn_operator)
 
-seeds = jnp.array(loadtxt('./seeds-very-limited', dtype=int))
+seeds = jnp.array(loadtxt('./seeds-limited', dtype=int))
 
 for seed in seeds:
     expe_parameters.seed = seed

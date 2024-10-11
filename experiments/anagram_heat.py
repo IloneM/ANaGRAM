@@ -1,5 +1,5 @@
 """
-ENGD Optimization.
+ANaGRAM Optimization.
 One dimensional heat equation example. Solution given by
 
 u(t,x) = exp(pi**2 * t * 0.25) * sin(pi * x).
@@ -64,7 +64,6 @@ integrators = (initial_integrator, rboundary_integrator, lboundary_integrator, i
 def u_0(tx):
     x = tx[1]
     return jnp.sin(jnp.pi * x)
-# v_u_0 = vmap(u_0, (0))
 
 sources = (u_0, null_source, null_source, null_source)
 

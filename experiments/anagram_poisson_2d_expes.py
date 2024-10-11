@@ -1,8 +1,8 @@
 """
-ENGD Optimization.
-One dimensional heat equation example. Solution given by
+ANaGRAM Optimization.
+Two dimensional Poisson equation example. Solution given by
 
-u(t,x) = exp(pi**2 * t * 0.25) * sin(pi * x).
+u(x,y) = sin(pi*x) * sin(py*y).
 
 """
 import sys
