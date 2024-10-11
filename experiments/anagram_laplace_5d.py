@@ -1,6 +1,6 @@
 """
 ANaGRAM Optimization.
-Five dimensional Poisson equation example. Solution given by
+Five dimensional Laplace equation example. Solution given by
 
 u(x) = sum_{i=1}^5 sin(pi * x_i)
 

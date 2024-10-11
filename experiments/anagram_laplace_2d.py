@@ -1,6 +1,6 @@
 """
 ANaGRAM Optimization.
-Two dimensional Poisson equation example. Solution given by
+Two dimensional Laplace equation example. Solution given by
 
 u(x,y) = sin(pi*x) * sin(py*y).
 
@@ -26,7 +26,7 @@ from ngrad.domains import Square, SquareBoundary
 from ngrad.integrators import DeterministicIntegrator
 from anagram import identity_operator, null_source, laplacian
 from anagram_assistant import *
-from numpy import loadtxt
+
 
 jax.config.update("jax_enable_x64", True)
 from jax.lib import xla_bridge
@@ -56,11 +56,6 @@ eval_integrator = DeterministicIntegrator(interior, expe_parameters.n_eval_sampl
 
 integrators = (boundary_integrator, interior_integrator, eval_integrator)
 
-test_interior_integrator = DeterministicIntegrator(interior, expe_parameters.n_inner_samples * 5)
-test_boundary_integrator = DeterministicIntegrator(boundary, expe_parameters.n_boundary_samples * 5)
-
-test_integrators = (test_boundary_integrator, test_interior_integrator)
-
 # differential operators
 laplace_operator = lambda u: laplacian(u, (0,1))
 functional_operators = dict(boundary=identity_operator, interior=laplace_operator)
@@ -77,17 +72,12 @@ sources = (null_source, f)
 def u_star(x):
     return jnp.prod(jnp.sin(jnp.pi * x))
 
-seeds = jnp.array(loadtxt('./seeds', dtype=int))
+assistant = Assistant(
+    integrators,
+    functional_operators,
+    expe_parameters,
+    sources,
+    u_star
+)
 
-for seed in seeds:
-    expe_parameters.seed = seed
-    assistant = Assistant(
-        integrators,
-        functional_operators,
-        expe_parameters,
-        sources,
-        u_star,
-        test_integrators,
-    )
-
-    assistant.optimize()
+assistant.optimize()
