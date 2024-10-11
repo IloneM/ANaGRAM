@@ -8,17 +8,27 @@ You have to download it first in the folder Natural-Gradient-PINNs-ICML23.
 All experiments can be found in the “experiments” path. Scripts with the suffix “expes” are those to be used to reproduce the results of the article.
 For ENGD and ANaGRAM, simply run the corresponding script directly, e.g. for the 2D Laplace equation:
 - For ANaGRAM:
-`python anagram_laplace_2d_expes.py`
+```
+python anagram_laplace_2d_expes.py
+```
 - For ENGD:
-`python engd_laplace_2d_expes.py`
+```
+python engd_laplace_2d_expes.py
+```
 
 For Adam, GD, L-BFGS, use the interface to pass corresponding options (see below), e.g. for the 2D Laplace equation:
 - For Adam:
-`python anagram_laplace_2d_expes.py --nsteps 20001 --expe_name adam_laplace_2d_expes --optimizer adam`
+```
+python anagram_laplace_2d_expes.py --nsteps 20001 --expe_name adam_laplace_2d_expes --optimizer adam
+```
 - For GD:
-`python anagram_laplace_2d_expes.py --nsteps 20001 --expe_name sgd_laplace_2d_expes --optimizer sgd`
+```
+python anagram_laplace_2d_expes.py --nsteps 20001 --expe_name sgd_laplace_2d_expes --optimizer sgd
+```
 - For L-BFGS:
-`python anagram_laplace_2d_expes.py --nsteps 2001 --expe_name lbfgs_laplace_2d_expes --optimizer lbfgs`
+```
+python anagram_laplace_2d_expes.py --nsteps 2001 --expe_name lbfgs_laplace_2d_expes --optimizer lbfgs
+```
 
 By default, logs and final weights will be saved in the experiments-results subfolder.
 
