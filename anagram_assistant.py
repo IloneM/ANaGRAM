@@ -22,7 +22,6 @@ import jax.numpy as jnp
 import optax
 import numpy as np
 from anagram_optimizer import l2_square_norm, Optimizer
-# from adam_optimizer import AdamOptimizer
 from pinns_optimizer import PinnsOptimizer
 from classical_methods_utility import scale_by_line_search, adam_lbfgs, lbfgs, engd
 from anagram_logging_tools import write_to_tensorboard, write_singular_values, write_weights, plot_NTK, plot_NNTK #, plot_Green
