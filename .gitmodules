@@ -1,0 +1,3 @@
+[submodule "Natural-Gradient-PINNs-ICML23"]
+	path = Natural-Gradient-PINNs-ICML23
+	url = git@github.com:IloneM/Natural-Gradient-PINNs-ICML23.git
