@@ -1,8 +1,7 @@
 # ANaGRAM: A Natural Gradient Relative to Adapted Model for efficient PINNs learning
 ## Settings instructions
-This code is based on the code of E-NGD available at <https://github.com/MariusZeinhofer/Natural-Gradient-PINNs-ICML23>.
-For the needs of this paper, we forked it and made it available anonymously at <https://anonymous.4open.science/r/Natural-Gradient-PINNs-ICML23-3815/>.
-You have to download it first in the folder Natural-Gradient-PINNs-ICML23.
+This code is based on the code of E-NGD, forked at <https://github.com/IloneM/Natural-Gradient-PINNs-ICML23>.
+Make sure to initialize all the submodules in order to get a working code.
 
 ## Running experiments
 All experiments can be found in the “experiments” path. Scripts with the suffix “expes” are those to be used to reproduce the results of the article.
